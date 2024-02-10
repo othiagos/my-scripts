@@ -5,8 +5,9 @@ import hashlib
 
 
 def is_image(file):
-    image_extensions = ['.jpg', '.jpeg', '.png']
-    return any(file.lower().endswith(ext) for ext in image_extensions)
+    _, ext = os.path.splitext(file)
+    extension = {'.jpg', '.jpeg', '.png'}
+    return ext in extension
 
 
 def generate_sha256_hash(file):
