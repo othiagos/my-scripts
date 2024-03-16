@@ -1,6 +1,11 @@
 #!/bin/zsh
 
 file="/usr/share/applications/brave-browser.desktop"
-text=" --enable-features=TouchpadOverscrollHistoryNavigation"
+input="TouchpadOverscrollHistoryNavigation"
+features=" --enable-features=${input}"
 
-sed -i "/Exec/{/$text/!s/$/ $text/}" "$file"
+search=$(cat $file | grep $input)
+
+if [ -z $search ]; then
+	sed -i "/Exec/{/$features/!s/$/ $features/}" "$file"
+fi
