@@ -1,19 +1,70 @@
-from hashlib import _Hash as Hash
+from enum import Enum
+import hashlib
+import cv2 as cv
 import os
 import re
 import sys
-import hashlib
+
+
+class ImageFormat(Enum):
+    PNG: str = ".png"
+    JPG: str = ".jpg"
+    WEBP: str = ".webp"
+    JPEG: str = ".jpeg"
+
+
+class ValidExtension(Enum):
+    PNG: str = ImageFormat.PNG.value
+    JPG: str = ImageFormat.JPG.value
+
+
+class ConvertExtension(Enum):
+    WEBP: str = ImageFormat.WEBP.value
+    JPEG: str = ImageFormat.JPEG.value
+
+
+def convert_format(directory: str, image_name: str, new_format: ValidExtension) -> str:
+    file_name, _ = split_file(image_name)
+    new_name = file_name + new_format.value
+
+    if directory[-1] != "/":
+        directory += "/"
+
+    image_path = directory + image_name
+    img = cv.imread(image_path)
+    os.remove(image_path)
+    cv.imwrite(directory + new_name, img)
+
+    print(f"Change the format of image {image_name} to format {new_format.value}")
+    return new_name
+
+
+def convert_image(directory: str, path: str) -> str:
+    format_conversion = {
+        ConvertExtension.WEBP.value: ValidExtension.PNG,
+        ConvertExtension.JPEG.value: ValidExtension.JPG,
+    }
+
+    _, ext = split_file(path)
+    new_format: ValidExtension = format_conversion[ext]
+
+    return convert_format(directory, path, new_format)
 
 
 def is_image(file: str) -> bool:
     ext: str
-    _, ext = os.path.splitext(file)
-    extension: set[str] = {".jpg", ".jpeg", ".png"}
-    return ext in extension
+    _, ext = split_file(file)
+    return any([ext == format.value for format in ImageFormat])
+
+
+def is_valid_format(file: str) -> bool:
+    ext: str
+    _, ext = split_file(file)
+    return any([ext == format.value for format in ValidExtension])
 
 
 def generate_sha256_hash(file: str) -> str:
-    sha256: Hash = hashlib.sha256()
+    sha256 = hashlib.sha256()
 
     with open(file, "rb") as f:
         for block in iter(lambda: f.read(4096), b""):
@@ -70,6 +121,9 @@ def rename_image_to_hash(directory: str) -> None:
             continue
 
         try:
+            if not is_valid_format(file):
+                file = convert_image(directory, file)
+
             rename_with_hash(directory, file)
         except Exception as err:
             print(f"File named {file} could not be renamed:", err)
