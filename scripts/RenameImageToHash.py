@@ -1,50 +1,53 @@
-from enum import Enum
 import hashlib
-import cv2 as cv
 import os
 import re
 import sys
+from enum import StrEnum
+
+import cv2 as cv
+from numpy import ndarray
 
 
-class ImageFormat(Enum):
+class ImageFormat(StrEnum):
     PNG: str = ".png"
     JPG: str = ".jpg"
     WEBP: str = ".webp"
     JPEG: str = ".jpeg"
 
 
-class ValidExtension(Enum):
-    PNG: str = ImageFormat.PNG.value
-    JPG: str = ImageFormat.JPG.value
+class ValidExtension(StrEnum):
+    PNG: str = ImageFormat.PNG
+    JPG: str = ImageFormat.JPG
 
 
-class ConvertExtension(Enum):
-    WEBP: str = ImageFormat.WEBP.value
-    JPEG: str = ImageFormat.JPEG.value
+class ConvertExtension(StrEnum):
+    WEBP: str = ImageFormat.WEBP
+    JPEG: str = ImageFormat.JPEG
 
 
 def convert_format(directory: str, image_name: str, new_format: ValidExtension) -> str:
+    file_name: str
     file_name, _ = split_file(image_name)
-    new_name = file_name + new_format.value
+    new_name: str = file_name + new_format
+    read_image_path: str = os.path.join(directory, image_name)
+    write_image_path: str = os.path.join(directory, new_name)
 
-    if directory[-1] != "/":
-        directory += "/"
+    img: ndarray = cv.imread(read_image_path)
 
-    image_path = directory + image_name
-    img = cv.imread(image_path)
-    os.remove(image_path)
-    cv.imwrite(directory + new_name, img)
+    cv.imwrite(write_image_path, img)
+    os.remove(read_image_path)
 
-    print(f"Change the format of image {image_name} to format {new_format.value}")
+    print(f"Change the format of image {image_name} to format {new_format}")
     return new_name
 
 
 def convert_image(directory: str, path: str) -> str:
-    format_conversion = {
-        ConvertExtension.WEBP.value: ValidExtension.PNG,
-        ConvertExtension.JPEG.value: ValidExtension.JPG,
+    format_conversion: dict[ConvertExtension, ValidExtension] = {
+        ConvertExtension.WEBP: ValidExtension.PNG,
+        ConvertExtension.JPEG: ValidExtension.JPG,
     }
 
+    ext: str
     _, ext = split_file(path)
     new_format: ValidExtension = format_conversion[ext]
 
@@ -54,17 +57,17 @@ def convert_image(directory: str, path: str) -> str:
 def is_image(file: str) -> bool:
     ext: str
     _, ext = split_file(file)
-    return any([ext == format.value for format in ImageFormat])
+    return any([ext == format for format in ImageFormat])
 
 
 def is_valid_format(file: str) -> bool:
     ext: str
     _, ext = split_file(file)
-    return any([ext == format.value for format in ValidExtension])
+    return any([ext == format for format in ValidExtension])
 
 
 def generate_sha256_hash(file: str) -> str:
-    sha256 = hashlib.sha256()
+    sha256: hashlib.HASH = hashlib.sha256()
 
     with open(file, "rb") as f:
         for block in iter(lambda: f.read(4096), b""):
@@ -129,13 +132,23 @@ def rename_image_to_hash(directory: str) -> None:
             print(f"File named {file} could not be renamed:", err)
 
 
+def parse(image_directory: str) -> str:
+    if not os.path.isdir(image_directory):
+        raise RuntimeError('Cannot find image directory')
+    
+    return image_directory
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         print("No directory specified")
         return
-
-    target_dir = sys.argv[1]
-    rename_image_to_hash(target_dir)
+    
+    try: 
+        target_dir: str = parse(sys.argv[1])
+        rename_image_to_hash(target_dir)
+    except RuntimeError as err:
+        print(err)
 
 
 if __name__ == "__main__":
